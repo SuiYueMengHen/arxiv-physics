@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+  <defs>
+    <linearGradient id="navy" x1="0" y1="0" x2="108" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#071F47"/><stop offset="1" stop-color="#031631"/></linearGradient>
+    <linearGradient id="orbit" x1="22" y1="68" x2="86" y2="35" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#37E9C9"/><stop offset="0.48" stop-color="#00ACBE"/><stop offset="1" stop-color="#38F0CB"/></linearGradient>
+    <linearGradient id="paper" x1="36" y1="24" x2="74" y2="81" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FAF0DC"/><stop offset="0.55" stop-color="#FFF8E9"/><stop offset="1" stop-color="#F6EAD4"/></linearGradient>
+    <linearGradient id="shadow" x1="58" y1="32" x2="68" y2="49" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#AFA18D"/><stop offset="1" stop-color="#D9CBB5"/></linearGradient>
+    <linearGradient id="fold" x1="56" y1="28" x2="70" y2="45" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFFDF6"/><stop offset="1" stop-color="#FFF8E9"/></linearGradient>
+    <linearGradient id="particle" x1="80" y1="38" x2="87" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#08DCCB"/><stop offset="1" stop-color="#63F9D5"/></linearGradient>
+  </defs>
+  <path id="background" fill="url(#navy)" d="M0 0H108V108H0Z"/>
+  <g transform="translate(54 54) scale(0.84) translate(-54 -54)">
+    <path id="orbit-back" fill="none" stroke="url(#orbit)" stroke-width="3" stroke-linecap="round" d="M84 34C75 21 48 32 30 47C12 63 16 77 35 75C56 74 79 58 86 43C88 38 88 35 84 34"/>
+    <path id="sheet" fill="url(#paper)" d="M40 24L55 27Q57 27.4 59 30L70 42Q73 45 73 49L73 75Q73 83 67 81L42 73Q36 71 36 65L36 29Q36 23 40 24Z"/>
+    <path id="fold-shadow" fill="url(#shadow)" d="M55.5 27.3L56.5 40Q56.5 44 61 45.5L70 48Q73 49 73 50Q72.8 45.5 70 42L59 30Q57 27.5 55.5 27.3Z"/>
+    <path id="fold-face" fill="url(#fold)" d="M55.5 27.3Q56.5 27.5 59 30L70 42Q71 43 71.5 45.5L61.5 42.5Q57.4 41.2 57 37L56 29Z"/>
+    <path id="lines" fill="none" stroke="#CFC2AD" stroke-width="2.8" stroke-linecap="round" d="M43.5 45L65 50M43.5 50.7L65 55.7M43.5 56.4L59 60M43.5 62L51 63.8"/>
+    <path id="orbit-front" fill="none" stroke="url(#orbit)" stroke-width="3" stroke-linecap="round" d="M30 47C12 63 16 77 35 75C56 74 79 58 86 43C88 38 88 35 84 34"/>
+    <path id="particle-body" fill="url(#particle)" d="M89 34A5 5 0 1 1 79 34A5 5 0 1 1 89 34Z"/>
+    <path id="particle-light" fill="#B8FFE5" d="M87.4 32.2A1.5 1.5 0 1 1 84.4 32.2A1.5 1.5 0 1 1 87.4 32.2Z"/>
+  </g>
+</svg>

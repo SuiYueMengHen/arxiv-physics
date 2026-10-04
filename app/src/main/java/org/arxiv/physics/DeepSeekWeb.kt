@@ -82,6 +82,7 @@ class DeepSeekWeb(private val app: ArxivApp) {
     fun prepare(p: Paper, pdf: File) {
         require(pdf.exists()) { "请先下载 PDF" }
         session++
+        app.recordDownloaded(p)
         paper = p; file = pdf; prepared = false; chooserProvided = false
         savedId = null
         attachmentAttempts = 0; lastAttachmentAttempt = 0
@@ -143,7 +144,6 @@ class DeepSeekWeb(private val app: ArxivApp) {
                     }
                     if (state.optString("input").isBlank()) fill(TranslationProtocol.prompt(p))
                     prepared = true
-                    app.updateJob(TranslationJob(p.id, Stage.UPLOADING, -1, "网页准备附件与指令；请手动发送、手动复制回答"))
                 }
                 if (!chooserProvided && attachmentAttempts < 3) requestAttachment()
                 if (chooserProvided) { status = "附件与指令已准备，请确认解析完成后手动发送；复制回答后自动保存"; return }

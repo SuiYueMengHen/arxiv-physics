@@ -256,7 +256,7 @@ private fun PaperDetail(app: ArxivApp, p: Paper, onWeb: () -> Unit, onPreview: (
                 val file = app.repository.download(p) { percent -> scope.launch { progress = percent } }
                 downloaded = true
                 if (openWeb) { app.web.prepare(p, file); onWeb() }
-                else app.updateJob(TranslationJob(p.id, Stage.DOWNLOADED, 100, "PDF 已保存"))
+                else app.recordDownloaded(p)
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (e: Exception) { notice = e.message ?: "下载失败，请重试" }
             finally { downloading = false }
@@ -302,7 +302,7 @@ private fun LibraryScreen(app: ArxivApp, open: (Paper) -> Unit, account: () -> U
             FilterChip(selected = section == 1, onClick = { section = 1 }, label = { Text("下载与翻译") })
         }
         if (section == 0 && saved.isEmpty()) EmptyState(Icons.Outlined.Bookmarks, "收藏值得重读的论文", "在论文详情中点击收藏，稍后可从这里离线查看基本信息。")
-        else if (section == 1 && app.jobs.isEmpty()) EmptyState(Icons.Outlined.Translate, "还没有保存记录", "在论文详情中打开网页翻译，回答会自动保存。")
+        else if (section == 1 && app.jobs.isEmpty()) EmptyState(Icons.Outlined.Translate, "还没有保存记录", "下载论文后会显示在这里；手动复制译文后保存到本地。")
         else LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (section == 0) items(saved, key = { it.id }) { p ->
                 val chinese = savedTitle(app, p)
@@ -324,12 +324,17 @@ private fun LibraryScreen(app: ArxivApp, open: (Paper) -> Unit, account: () -> U
 
 @Composable
 private fun JobCard(job: TranslationJob, compact: Boolean = false) {
+    if (job.stage == Stage.DOWNLOADED) {
+        Text("本地文件已下载", style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
+        return
+    }
     Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth().padding(if (compact) 12.dp else 0.dp)) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(job.stage.label, style = MaterialTheme.typography.labelLarge)
             Text(job.message, style = MaterialTheme.typography.bodySmall)
-            if (job.stage in setOf(Stage.QUEUED, Stage.DOWNLOADING, Stage.UPLOADING, Stage.TRANSLATING)) {
-                if (job.progress < 0 || job.stage != Stage.DOWNLOADING) LinearProgressIndicator(Modifier.fillMaxWidth())
+            if (job.stage == Stage.DOWNLOADING) {
+                if (job.progress < 0) LinearProgressIndicator(Modifier.fillMaxWidth())
                 else LinearProgressIndicator(progress = { job.progress / 100f }, modifier = Modifier.fillMaxWidth())
             }
         }

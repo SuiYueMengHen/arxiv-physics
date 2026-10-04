@@ -94,3 +94,12 @@ adb shell am instrument -w org.arxiv.physics.test/org.arxiv.physics.SmokeInstrum
 - 多源选择取最大 versionCode；过期镜像不覆盖新版本，同版本不同哈希拒绝更新，匹配的新镜像用于优先下载。
 - 正式 APK 签名 SHA-256 与 0.5.0 一致（15bd717f93a3d7e2f7498c491637125f27764b420f669afad4611d85ce7da217），非 debuggable。
 - 本轮没有国内运营商实机网络条件，也未部署需要外部账号的国内对象存储；不能将备用 CDN 的成功视作所有国内网络都能访问。完整系统安装和设备资料保留验证见 0.5.0 记录；本轮未重复该流程。
+
+## 0.5.2 简短提示词、静态状态与图标
+
+- Release / Debug / AndroidTest 构建和 Lint 通过，17 个单元测试通过。
+- API 36 专用模拟器 7 项设备测试通过：Atom、SQLite、离线 Markdown 公式、剪贴板导入、附件及提示词准备、主题持久化、自适应图标渲染。
+- 附件测试确认网页收到正确 PDF、输入框为新的简短提示词、发送计数仍为零；退出网页后记录保持 DOWNLOADED 和“本地文件已下载”，准备完成后停止 DOM 轮询。
+- 旧网页任务在升级启动时按照已存文件归拢；未复制不会创建译文。剪贴板保存策略保持不变。
+- 内置 imagegen 设计稿已复制入 design，SVG 不嵌入位图；同源生成 Android 彩色渐变矢量和单色主题资源。实际 AdaptiveIconDrawable 渲染见 design/icon-android-v0.5.2.png，已目视检查圆形遮罩下主体没有裁切。
+- 正式 APK 使用与 0.5.0 / 0.5.1 相同的私有正式签名；没有在 DeepSeek 真实账号上测量长短提示词的输出长度，无法归因于网站风控或保证全文一次输出。

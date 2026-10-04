@@ -15,7 +15,7 @@ class SmokeInstrumentation : Instrumentation() {
     override fun onCreate(arguments: Bundle?) { super.onCreate(arguments); start() }
     override fun onStart() {
         val results = mutableListOf<String>()
-        val tests: List<Pair<String, () -> Unit>> = listOf("Android Atom parser" to ::atom, "SQLite cache and bookmark" to ::database, "Offline Markdown and formulas" to ::reader, "Clipboard update imports paper Markdown" to ::clipboardImport, "PDF upload and prompt without automatic send" to ::uploadAndSend, "Theme preference persists" to ::themePreference)
+        val tests: List<Pair<String, () -> Unit>> = listOf("Android Atom parser" to ::atom, "SQLite cache and bookmark" to ::database, "Offline Markdown and formulas" to ::reader, "Clipboard update imports paper Markdown" to ::clipboardImport, "PDF upload and prompt without automatic send" to ::uploadAndSend, "Theme preference persists" to ::themePreference, "Adaptive launcher icon renders" to ::icon)
         tests.forEach { (name, run) ->
             runCatching(run).onSuccess { results.add("PASS $name") }.onFailure { results.add("FAIL $name: $it") }
         }
@@ -130,6 +130,18 @@ class SmokeInstrumentation : Instrumentation() {
             markdown.delete(); testStore.close(); targetContext.deleteDatabase("clipboard-smoke.db")
         }
     }
+    private fun icon() {
+        val drawable = targetContext.packageManager.getApplicationIcon(targetContext.packageName)
+        check(drawable is android.graphics.drawable.AdaptiveIconDrawable)
+        val bitmap = android.graphics.Bitmap.createBitmap(432, 432, android.graphics.Bitmap.Config.ARGB_8888)
+        drawable.setBounds(0, 0, 432, 432)
+        drawable.draw(android.graphics.Canvas(bitmap))
+        java.io.File(targetContext.cacheDir, "icon-smoke.png").outputStream().use {
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+        }
+        check(android.graphics.Color.alpha(bitmap.getPixel(216, 216)) == 255)
+        bitmap.recycle()
+    }
     private fun themePreference() {
         val app = targetContext.applicationContext as ArxivApp
         val old = app.themeMode
@@ -190,7 +202,10 @@ class SmokeInstrumentation : Instrumentation() {
             }
             check(result.optBoolean("activated")) { "File picker lacked native user activation: $result" }
             check(result.optString("bytes").startsWith("%PDF-")) { "PDF bytes were not attached: $result" }
-            check(result.optString("prompt").contains(p.id) && result.optString("prompt").contains("ARXIV_TRANSLATION_CONTINUE")) { "Full translation prompt missing: $result" }
+            check(result.optString("prompt") == TranslationProtocol.prompt(p)) { "Simple translation prompt missing: $result" }
+            withContext(Dispatchers.Main) { engine.detachContext() }
+            check(testStore.jobs().single().stage == Stage.DOWNLOADED) { "Leaving without copying created an active translation job" }
+            check(testStore.jobs().single().message == "本地文件已下载")
             delay(3500)
             val sent = withContext(Dispatchers.Main) { engine.evaluate("String(window.sent)") }
             check(sent == "0") { "Request was automatically sent: $sent" }

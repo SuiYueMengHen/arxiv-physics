@@ -12,8 +12,8 @@ android {
         applicationId = "org.arxiv.physics"
         minSdk = 26
         targetSdk = 36
-        versionCode = providers.gradleProperty("updateTestVersionCode").orNull?.toInt() ?: 6
-        versionName = providers.gradleProperty("updateTestVersionName").orNull ?: "0.5.1"
+        versionCode = providers.gradleProperty("updateTestVersionCode").orNull?.toInt() ?: 7
+        versionName = providers.gradleProperty("updateTestVersionName").orNull ?: "0.5.2"
         testInstrumentationRunner = "org.arxiv.physics.SmokeInstrumentation"
     }
     buildFeatures { compose = true; buildConfig = true }

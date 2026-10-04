@@ -1,4 +1,4 @@
-# arXiv Physics · Android 0.5.0
+# arXiv Physics · Android 0.5.2
 
 原生 Kotlin / Jetpack Compose / Material 3，Android 8.0+。覆盖全部 51 个物理分类，提供动态、历史检索、本地收藏、PDF、支持公式的离线 Markdown 阅读。
 
@@ -9,7 +9,7 @@
 1. 动态支持全站最近 30 天、全部物理、订阅领域；检索支持分类、关键词、日期和时间排序。
 2. 论文详情可单独下载 PDF，或下载后翻译，也可“下载并翻译”。
 3. 在应用内 DeepSeek 官方网页登录。应用准备本篇 PDF 和全文翻译提示词，**你确认附件解析完成后手动发送**。不自动发送，不自动复制，不自动续写。
-4. 长文中断时，网页菜单可“填入继续翻译指令”，仍由你发送。强化提示词要求逐页逐段、保留公式、脚注、图表、附录与参考文献，标注续译断点，仅全文覆盖后输出完成标记。提示词无法解除平台输出限制或保证模型绝不漏译。
+4. 长文中断时，网页菜单可“填入继续翻译指令”，仍由你发送。简短提示词要求全文翻译、保留原文结构与公式；长度不足时说明停止位置，不要求特殊完成标记。提示词无法解除平台输出限制或保证模型绝不漏译。
 5. 手动复制回答：当前论文网页位于前台时，新剪贴板超过 500 个 Unicode 字符，自动保存到该论文 Markdown，并返回全屏阅读。旧剪贴板、短文本不导入；重新复制相同长文本可导入。多段回答需先合并为所需完整内容再复制，保存会覆盖该论文文件。
 6. 已保存内容可离线重读、分享 PDF / Markdown；收藏和下载列表展示译文中文文档标题与原英文题名。旧译文无中文标题时保留英文。
 7. 主页右上角设置：白天、夜间、跟随系统；选择立即生效并保存，阅读器与系统栏同步。
@@ -48,3 +48,5 @@ adb shell am instrument -w org.arxiv.physics.test/org.arxiv.physics.SmokeInstrum
 [arXiv API 手册](https://info.arxiv.org/help/api/user-manual.html) · [物理分类](https://arxiv.org/category_taxonomy)。第三方阅读器，与 arXiv / DeepSeek 无隶属关系。离线渲染依赖 marked 与 KaTeX，许可证保存在 `app/src/main/assets/vendor/`。
 
 更新网络容错（0.5.1）：并行读取 GitHub / CDN 清单，总超时每源 8 秒；支持用户配置国内 HTTPS 镜像、下载断点续传和签名校验。国内镜像部署方式见 [Release 维护](docs/RELEASING.md)。CDN 不是国内可用性保证，未配置镜像时 APK 仍从 GitHub 下载。
+
+0.5.2 简化翻译指令，并将未复制译文的资料显示为静态“本地文件已下载”。图标由 imagegen 设计并复刻为 [SVG](design/icon.svg)，应用采用同路径生成的 Android 自适应矢量和主题图标，设计提示词及生成方式见 [图标设计](design/README.md)。
