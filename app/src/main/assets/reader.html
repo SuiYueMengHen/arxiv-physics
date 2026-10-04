@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="stylesheet" href="/assets/vendor/katex.min.css">
+<script src="/assets/vendor/marked.min.js"></script><script src="/assets/vendor/katex.min.js"></script>
+<style>
+:root{color-scheme:light dark}body{font-family:system-ui,sans-serif;background:#faf9ff;color:#1a1c22;font-size:17px;line-height:1.8;margin:0;padding:24px;overflow-wrap:anywhere}body.dark{background:#121318;color:#e4e2e9}main{max-width:760px;margin:auto}h1,h2,h3{line-height:1.4;margin-top:1.6em}h1{font-size:1.7em}h2{font-size:1.4em}h3{font-size:1.15em}a{color:#315da8}.dark a{color:#acc7ff}pre,blockquote{background:#e8eaf3;padding:16px;border-radius:12px;overflow:auto}.dark pre,.dark blockquote{background:#252730}code{font-family:monospace;font-size:.9em}table{display:block;overflow:auto;border-collapse:collapse}td,th{border:1px solid #7c8190;padding:8px}.math-display{overflow-x:auto;padding:8px 0}.katex{font-size:1.1em}hr{border:0;border-top:1px solid #c3c6d2}#error{color:#ba1a1a}
+</style></head><body><main id="content">正在加载译文…</main><p id="error" role="alert"></p>
+<script>
+function renderDocument(){
+ if(typeof window.pendingDocument!=='string'||typeof marked==='undefined'||typeof katex==='undefined')return;
+ document.body.classList.toggle('dark',!!window.readerDark);
+ const scroll=window.scrollY;
+ const formulas=[];
+ // Protect math from Markdown processing, including both dollar and LaTeX delimiters.
+ const source=window.pendingDocument.replace(/```[\s\S]*?```|`[^`\n]*`|\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|(?<!\\)\$([^$\n]+?)(?<!\\)\$/g,(match,block,bracket,paren,inline)=>{
+  if(match.startsWith('`'))return match;
+  const id=formulas.length;formulas.push({tex:block||bracket||paren||inline,display:!!(block||bracket)});return 'ARXIVMATHPLACEHOLDER'+id+'END';
+ });
+ const doc=new DOMParser().parseFromString(marked.parse(source,{gfm:true}),'text/html');
+ // Sanitize before inserting into the live DOM. Remote images are deliberately omitted.
+ const allowed=new Set(['P','H1','H2','H3','H4','H5','H6','UL','OL','LI','A','STRONG','EM','DEL','BLOCKQUOTE','PRE','CODE','TABLE','THEAD','TBODY','TR','TH','TD','HR','BR']);
+ for(const el of [...doc.body.querySelectorAll('*')]){
+  if(!allowed.has(el.tagName)){el.replaceWith(doc.createTextNode(el.textContent||''));continue;}
+  const href=el.tagName==='A'?el.getAttribute('href'):null;
+  for(const attr of [...el.attributes])el.removeAttribute(attr.name);
+  if(href&&/^https?:\/\//i.test(href))el.setAttribute('href',href);
+ }
+ const target=document.getElementById('content');target.replaceChildren(...doc.body.childNodes);
+ const walker=document.createTreeWalker(target,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+ for(const node of nodes){
+  const regex=/ARXIVMATHPLACEHOLDER(\d+)END/g;let match,last=0;const frag=document.createDocumentFragment();let found=false;
+  while((match=regex.exec(node.textContent))){
+   found=true;frag.append(document.createTextNode(node.textContent.slice(last,match.index)));const f=formulas[Number(match[1])];const span=document.createElement('span');
+   if(f.display){span.className='math-display';span.style.display='block';}
+   try{katex.render(f.tex,span,{displayMode:f.display,throwOnError:false,trust:false,strict:'warn',maxExpand:1000});}catch(e){span.textContent=f.tex;}
+   frag.append(span);last=regex.lastIndex;
+  }
+  if(found){frag.append(document.createTextNode(node.textContent.slice(last)));node.replaceWith(frag);}
+ }
+ window.scrollTo(0,scroll);
+}
+window.addEventListener('load',renderDocument);
+</script></body></html>

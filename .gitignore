@@ -1,0 +1,16 @@
+.gradle/
+.idea/
+local.properties
+**/build/
+*.iml
+*.jks
+.DS_Store
+
+# Never publish keys, local credentials, build outputs or downloaded papers.
+signing/
+signing.properties
+*.keystore
+*.pem
+*.p12
+dist/
+.env*
