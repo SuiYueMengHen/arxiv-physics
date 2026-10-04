@@ -15,9 +15,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import java.io.FileOutputStream
 import org.json.JSONObject
 import java.io.File
 import java.security.MessageDigest
@@ -29,22 +34,39 @@ object UpdatePolicy {
     fun newer(candidate: Long, installed: Long) = candidate > installed
     fun releaseAsset(url: String) = url.startsWith("https://github.com/$REPO/releases/download/") &&
         !url.contains("..") && !url.contains('?') && !url.contains('#')
+    fun httpsUrl(url: String): Boolean = url.toHttpUrlOrNull()?.let {
+        it.isHttps && it.username.isEmpty() && it.password.isEmpty() && it.fragment == null
+    } == true
+    fun resumeOffset(code: Int, range: String?, offset: Long, size: Long): Long {
+        if (code == 200) return 0
+        require(code == 206 && offset > 0 && range == "bytes $offset-${size - 1}/$size") { "服务器续传范围异常" }
+        return offset
+    }
+    fun select(results: List<AppRelease>): AppRelease {
+        val newest = results.maxByOrNull { it.versionCode }
+            ?: error("更新源暂时无法连接；请换网络重试，或设置国内镜像。已下载的更新仍可安装")
+        check(results.filter { it.versionCode == newest.versionCode }.all {
+            it.sha256 == newest.sha256 && it.size == newest.size && it.versionName == newest.versionName
+        }) { "更新源清单不一致，请稍后重试" }
+        // Prefer the configured mirror only when its content matches the newest version.
+        return results.firstOrNull { it.versionCode == newest.versionCode && it.mirrorUrl.isNotEmpty() } ?: newest
+    }
     fun validHash(hash: String) = Regex("[a-f0-9]{64}").matches(hash)
 }
 
 data class AppRelease(val versionCode: Long, val versionName: String, val apkName: String,
-    val url: String, val sha256: String, val size: Long, val notes: String) {
+    val url: String, val sha256: String, val size: Long, val notes: String, val mirrorUrl: String = "") {
     fun json() = JSONObject().put("versionCode", versionCode).put("versionName", versionName)
-        .put("apkName", apkName).put("url", url).put("sha256", sha256).put("size", size).put("notes", notes)
+        .put("apkName", apkName).put("url", url).put("sha256", sha256).put("size", size).put("notes", notes).put("mirrorUrl", mirrorUrl)
     companion object {
         fun parse(json: JSONObject) = AppRelease(json.getLong("versionCode"), json.getString("versionName"),
-            json.getString("apkName"), json.getString("url"), json.getString("sha256"), json.getLong("size"), json.optString("notes"))
+            json.getString("apkName"), json.getString("url"), json.getString("sha256"), json.getLong("size"), json.optString("notes"), json.optString("mirrorUrl"))
     }
 }
 
 /** Requests only on explicit user action. Ready APKs survive process restarts. */
 class AppUpdates(private val app: ArxivApp) {
-    private val client = OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
+    private val client = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).callTimeout(10, TimeUnit.MINUTES).build()
     private val folder get() = File(app.filesDir, "updates").apply { mkdirs() }
     private val pending get() = File(folder, "pending.json")
     var release by mutableStateOf<AppRelease?>(null)
@@ -59,16 +81,34 @@ class AppUpdates(private val app: ArxivApp) {
         private set
     fun notice(text: String) { message = text }
     private fun apk(info: AppRelease) = File(folder, "arxiv-${info.versionCode}.apk")
-    private fun request(url: String) = client.newCall(Request.Builder().url(url)
-        .header("Accept", "application/vnd.github+json").header("User-Agent", "ArxivPhysics/${BuildConfig.VERSION_NAME}").build())
-    private fun readJson(url: String): JSONObject = request(url).execute().use { response ->
-        if (response.code == 403 || response.code == 429) error("GitHub 暂时限制请求，请稍后再检查")
-        check(response.isSuccessful) { "检查更新失败 HTTP ${response.code}" }
-        val body = checkNotNull(response.body)
-        body.byteStream().use { input ->
-            val bytes = input.readBytesLimited(256 * 1024)
-            JSONObject(String(bytes, Charsets.UTF_8))
-        }
+    private val network = UpdateNetwork()
+    var mirror by mutableStateOf(app.prefs.getString("updateMirror", "").orEmpty())
+        private set
+    fun saveMirror(value: String) {
+        val url = value.trim()
+        require(url.isEmpty() || UpdatePolicy.httpsUrl(url)) { "请输入 HTTPS 更新清单地址" }
+        mirror = url; app.prefs.edit().putString("updateMirror", url).apply()
+        notice(if (url.isEmpty()) "已使用默认更新源" else "镜像已保存，下次检查时生效")
+    }
+    private suspend fun latest(): AppRelease = coroutineScope {
+        val sources = listOf(
+            "https://github.com/${UpdatePolicy.REPO}/releases/latest/download/update.json",
+            "https://cdn.jsdelivr.net/gh/${UpdatePolicy.REPO}@main/updates/latest.json"
+        ) + listOfNotNull(mirror.takeIf { it.isNotBlank() })
+        val results = sources.map { source -> async {
+            try {
+                val json = JSONObject(network.manifest(source))
+                val version = json.getString("versionName")
+                val name = json.getString("apkName")
+                require(Regex("[0-9]+(\\.[0-9]+){2}").matches(version) && name == "arxiv-physics-v$version.apk") { "清单版本无效" }
+                val official = "https://github.com/${UpdatePolicy.REPO}/releases/download/v$version/$name"
+                val mirrorApk = if (source == mirror) source.toHttpUrlOrNull()!!.resolve(name)!!.toString() else ""
+                AppRelease(json.getLong("versionCode"), version, name, official, json.getString("sha256"),
+                    json.getLong("size"), json.optString("notes").take(8000), mirrorApk).also { validateInfo(it) }
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { null }
+        } }.awaitAll().filterNotNull()
+        UpdatePolicy.select(results)
     }
     suspend fun restore() {
         if (busy || release != null) return
@@ -88,32 +128,20 @@ class AppUpdates(private val app: ArxivApp) {
     }
     fun check() {
         if (busy) return
-        busy = true; message = "正在检查 GitHub 最新正式版本"
+        busy = true; message = "正在检查更新（并行备用源，最多约 8 秒）"
         app.scope.launch {
             try {
-                val info = withContext(Dispatchers.IO) {
-                    val remote = readJson("https://api.github.com/repos/${UpdatePolicy.REPO}/releases/latest")
-                    check(!remote.optBoolean("draft") && !remote.optBoolean("prerelease")) { "没有可用正式版本" }
-                    val assets = remote.getJSONArray("assets")
-                    fun asset(name: String): JSONObject? = (0 until assets.length()).map { assets.getJSONObject(it) }.find { it.optString("name") == name }
-                    val manifestUrl = checkNotNull(asset("update.json")) { "此版本没有更新清单" }.getString("browser_download_url")
-                    check(UpdatePolicy.releaseAsset(manifestUrl)) { "更新清单地址不匹配" }
-                    val manifest = readJson(manifestUrl)
-                    val binary = checkNotNull(asset(manifest.getString("apkName"))) { "此版本没有安装包" }
-                    val result = AppRelease(manifest.getLong("versionCode"), manifest.getString("versionName"), manifest.getString("apkName"),
-                        binary.getString("browser_download_url"), manifest.getString("sha256"), manifest.getLong("size"), remote.optString("body").take(8000))
-                    check(remote.getString("tag_name") == "v${result.versionName}") { "版本清单与 Release 不一致" }
-                    check(result.size == binary.getLong("size")) { "安装包大小与清单不一致" }
-                    validateInfo(result)
-                    val digest = binary.optString("digest")
-                    check(digest.isBlank() || digest == "sha256:${result.sha256}") { "安装包校验信息不一致" }
-                    result
+                val info = latest()
+                val known = release
+                if (known != null && known.versionCode > info.versionCode) {
+                    message = "更新源暂未同步；保留已发现的 ${known.versionName}"
+                    return@launch
                 }
                 if (UpdatePolicy.newer(info.versionCode, BuildConfig.VERSION_CODE.toLong())) {
                     val verified = withContext(Dispatchers.IO) { runCatching { verify(info, apk(info)) }.isSuccess }
                     release = info; ready = verified
                     message = if (verified) "${info.versionName} 已下载并校验，可以安装" else "发现新版本 ${info.versionName}"
-                } else { release = null; ready = false; message = "已是最新版本 ${BuildConfig.VERSION_NAME}" }
+                } else { release = null; ready = false; message = "可用更新源未发现新版本，当前 ${BuildConfig.VERSION_NAME}（CDN 可能有缓存延迟）" }
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) { message = e.message ?: "检查失败，请重试" }
             finally { busy = false }
@@ -127,30 +155,48 @@ class AppUpdates(private val app: ArxivApp) {
             try {
                 withContext(Dispatchers.IO) {
                     validateInfo(info)
-                    val temp = File(folder, "arxiv-${info.versionCode}.part.apk")
-                    try {
-                        request(info.url).execute().use { response ->
-                            check(response.isSuccessful) { "下载更新失败 HTTP ${response.code}" }
-                            val body = checkNotNull(response.body)
-                            check(body.contentLength() == -1L || body.contentLength() == info.size) { "下载大小异常" }
-                            body.byteStream().use { input -> temp.outputStream().use { output ->
-                                val buffer = ByteArray(64 * 1024); var loaded = 0L; var reported = -1
-                                while (true) {
-                                    currentCoroutineContext().ensureActive()
-                                    val count = input.read(buffer); if (count < 0) break
-                                    loaded += count; check(loaded <= info.size) { "下载内容超出清单大小" }
-                                    output.write(buffer, 0, count)
-                                    val percent = (loaded * 100 / info.size).toInt()
-                                    if (percent != reported) { reported = percent; withContext(Dispatchers.Main) { progress = percent / 100f } }
+                    // The content hash identifies partial data across retries and source switches.
+                    val temp = File(folder, "${info.sha256}.part.apk")
+                    folder.listFiles()?.filter { it.name.endsWith(".part.apk") && it != temp }?.forEach { it.delete() }
+                    if (temp.length() > info.size) temp.delete()
+                    var failure: Exception? = null
+                    for (url in (listOf(info.mirrorUrl).filter { it.isNotEmpty() } + info.url).distinct()) {
+                        try {
+                            if (temp.length() != info.size) {
+                                val offset = temp.length()
+                                val builder = Request.Builder().url(url).header("Accept-Encoding", "identity")
+                                    .header("User-Agent", "ArxivPhysics/${BuildConfig.VERSION_NAME}")
+                                if (offset > 0) builder.header("Range", "bytes=$offset-")
+                                client.newCall(builder.build()).execute().use { response ->
+                                    check(response.isSuccessful) { "下载更新失败 HTTP ${response.code}" }
+                                    val start = UpdatePolicy.resumeOffset(response.code, response.header("Content-Range"), offset, info.size)
+                                    val body = checkNotNull(response.body)
+                                    check(body.contentLength() == -1L || body.contentLength() == info.size - start) { "下载大小异常" }
+                                    body.byteStream().use { input -> FileOutputStream(temp, start > 0).use { output ->
+                                        val buffer = ByteArray(64 * 1024); var loaded = start; var reported = -1
+                                        while (true) {
+                                            currentCoroutineContext().ensureActive()
+                                            val count = input.read(buffer); if (count < 0) break
+                                            check(loaded + count <= info.size) { "下载内容超出清单大小" }
+                                            output.write(buffer, 0, count); loaded += count
+                                            val percent = (loaded * 100 / info.size).toInt()
+                                            if (percent != reported) { reported = percent; withContext(Dispatchers.Main) { progress = percent / 100f } }
+                                        }
+                                        check(loaded == info.size) { "更新下载中断，可点击重试继续下载" }
+                                    } }
                                 }
-                                check(loaded == info.size) { "更新下载不完整，请重试" }
-                            } }
-                        }
+                            }
+                            failure = null; break
+                        } catch (e: CancellationException) { throw e }
+                        catch (e: Exception) { failure = e }
+                    }
+                    failure?.let { throw it }
+                    try {
                         verify(info, temp)
                         check(temp.renameTo(apk(info))) { "更新包保存失败" }
                         val tempManifest = File(pending.path + ".part").apply { writeText(info.json().toString()) }
                         check(tempManifest.renameTo(pending)) { "更新清单保存失败" }
-                    } finally { temp.delete() }
+                    } catch (e: Exception) { temp.delete(); throw e }
                 }
                 ready = true; message = "已完成校验，准备打开系统安装界面"
                 onReady()
@@ -160,7 +206,7 @@ class AppUpdates(private val app: ArxivApp) {
         }
     }
     internal fun validateInfo(info: AppRelease) {
-        require(info.versionCode > 0 && info.size in 1..UpdatePolicy.MAX_APK && UpdatePolicy.validHash(info.sha256) && UpdatePolicy.releaseAsset(info.url)) { "更新清单无效" }
+        require(info.versionCode > 0 && info.size in 1..UpdatePolicy.MAX_APK && UpdatePolicy.validHash(info.sha256) && UpdatePolicy.releaseAsset(info.url) && (info.mirrorUrl.isEmpty() || UpdatePolicy.httpsUrl(info.mirrorUrl))) { "更新清单无效" }
     }
     internal fun verify(info: AppRelease, file: File) {
         validateInfo(info)
@@ -187,10 +233,5 @@ class AppUpdates(private val app: ArxivApp) {
         val uri = FileProvider.getUriForFile(app, "${app.packageName}.files", apk(info))
         return Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION).apply { clipData = ClipData.newRawUri("更新 APK", uri) }
-    }
-    private fun java.io.InputStream.readBytesLimited(limit: Int): ByteArray {
-        val output = java.io.ByteArrayOutputStream(); val buffer = ByteArray(8192)
-        while (true) { val n = read(buffer); if (n < 0) break; check(output.size() + n <= limit) { "更新信息过大" }; output.write(buffer, 0, n) }
-        return output.toByteArray()
     }
 }

@@ -85,3 +85,12 @@ adb shell am instrument -w org.arxiv.physics.test/org.arxiv.physics.SmokeInstrum
 - 开发者 ADB 通道同签名覆盖安装 0.4.99 → 0.5.0 成功，实际 package versionCode=5 / versionName=0.5.0；原收藏论文仍在。此结果不替代上述系统安装器最终安装的失败验收。此前 PDF 下载未完成即离开详情，故未用作本次升级保留样本。
 
 - 正式 0.5.0 实际检查公开最新 Release 显示“已是最新版本 0.5.0”，截图 `screenshots/update-latest.png`。已恢复本地默认 0.5.0 构建配置；较低测试 APK 未发布。
+
+## 0.5.1 更新网络容错
+
+- 正式 APK / Debug 构建、Lint 通过；17 个单元测试通过。
+- MockWebServer 模拟主源完全不响应（350ms 测试期限）与备用源成功，确认备用结果可用且请求按总期限结束；拒绝超过 256 KiB 清单。
+- 续传策略验证准确 HTTP 206 Content-Range，错误范围/总长度被拒绝；服务器返回 HTTP 200 时从头写入，不拼接错误内容。
+- 多源选择取最大 versionCode；过期镜像不覆盖新版本，同版本不同哈希拒绝更新，匹配的新镜像用于优先下载。
+- 正式 APK 签名 SHA-256 与 0.5.0 一致（15bd717f93a3d7e2f7498c491637125f27764b420f669afad4611d85ce7da217），非 debuggable。
+- 本轮没有国内运营商实机网络条件，也未部署需要外部账号的国内对象存储；不能将备用 CDN 的成功视作所有国内网络都能访问。完整系统安装和设备资料保留验证见 0.5.0 记录；本轮未重复该流程。

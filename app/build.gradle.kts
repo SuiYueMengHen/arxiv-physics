@@ -12,8 +12,8 @@ android {
         applicationId = "org.arxiv.physics"
         minSdk = 26
         targetSdk = 36
-        versionCode = providers.gradleProperty("updateTestVersionCode").orNull?.toInt() ?: 5
-        versionName = providers.gradleProperty("updateTestVersionName").orNull ?: "0.5.0"
+        versionCode = providers.gradleProperty("updateTestVersionCode").orNull?.toInt() ?: 6
+        versionName = providers.gradleProperty("updateTestVersionName").orNull ?: "0.5.1"
         testInstrumentationRunner = "org.arxiv.physics.SmokeInstrumentation"
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -56,4 +56,5 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }

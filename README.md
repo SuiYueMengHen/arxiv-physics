@@ -46,3 +46,5 @@ adb shell am instrument -w org.arxiv.physics.test/org.arxiv.physics.SmokeInstrum
 设备测试使用受控网页验证真实附件字节、提示词填入、不会自动发送及准备后停止检查；真实 DeepSeek 登录账户仍需实际验收。离线 Markdown / 公式、SQLite 收藏、原生剪贴板与主题偏好也有设备测试。
 
 [arXiv API 手册](https://info.arxiv.org/help/api/user-manual.html) · [物理分类](https://arxiv.org/category_taxonomy)。第三方阅读器，与 arXiv / DeepSeek 无隶属关系。离线渲染依赖 marked 与 KaTeX，许可证保存在 `app/src/main/assets/vendor/`。
+
+更新网络容错（0.5.1）：并行读取 GitHub / CDN 清单，总超时每源 8 秒；支持用户配置国内 HTTPS 镜像、下载断点续传和签名校验。国内镜像部署方式见 [Release 维护](docs/RELEASING.md)。CDN 不是国内可用性保证，未配置镜像时 APK 仍从 GitHub 下载。

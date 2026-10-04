@@ -526,6 +526,7 @@ private fun UpdateSettings(app: ArxivApp) {
     val scope = rememberCoroutineScope()
     val active = remember { AtomicBoolean(true) }
     var installing by remember { mutableStateOf(false) }
+    var mirrorInput by remember { mutableStateOf(manager.mirror) }
     DisposableEffect(Unit) { active.set(true); onDispose { active.set(false) } }
     LaunchedEffect(Unit) { manager.restore() }
     val installer = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -572,7 +573,13 @@ private fun UpdateSettings(app: ArxivApp) {
                     Text(if (manager.ready) "安装 ${info.versionName}" else "下载并安装 ${info.versionName} · ${info.size / 1024 / 1024} MB")
                 }
             }
-            Text("从 GitHub Release 获取正式版本；安装需你在系统界面确认，保留本地资料。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedTextField(value = mirrorInput, onValueChange = { mirrorInput = it },
+                label = { Text("备用镜像清单地址（可选）") }, placeholder = { Text("https://你的服务器/update.json") },
+                singleLine = true, enabled = !manager.busy, modifier = Modifier.fillMaxWidth())
+            TextButton(onClick = {
+                runCatching { manager.saveMirror(mirrorInput) }.onFailure { manager.notice(it.message ?: "镜像地址无效") }
+            }, enabled = !manager.busy) { Text("保存镜像设置") }
+            Text("同时检查 GitHub 和 CDN 备用清单。国内镜像需放置 update.json 及同目录 APK；安装前校验 SHA-256 和原应用签名。安装需在系统界面确认。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

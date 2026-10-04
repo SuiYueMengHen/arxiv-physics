@@ -19,8 +19,11 @@ folder.mkdir(parents=True, exist_ok=True)
 name = f'arxiv-physics-v{version}.apk'
 apk = folder / name
 shutil.copyfile(source, apk)
+notes_path = root / 'docs/releases' / f'v{version}.md'
 manifest = {'versionCode': code, 'versionName': version, 'apkName': name,
-            'size': apk.stat().st_size, 'sha256': hashlib.sha256(apk.read_bytes()).hexdigest()}
+            'size': apk.stat().st_size, 'sha256': hashlib.sha256(apk.read_bytes()).hexdigest(),
+            'notes': notes_path.read_text() if notes_path.exists() else ''}
 (folder / 'update.json').write_text(json.dumps(manifest, indent=2) + '\n')
 (folder / 'SHA256SUMS').write_text(f"{manifest['sha256']}  {name}\n")
 print(folder)
+print('发布 Release 后，将 update.json 复制到 updates/latest.json，再提交推送；避免清单指向尚未发布的 APK。')
