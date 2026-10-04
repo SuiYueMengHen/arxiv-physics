@@ -1,8 +1,8 @@
 {
-  "versionCode": 5,
-  "versionName": "0.5.0",
-  "apkName": "arxiv-physics-v0.5.0.apk",
-  "size": 12509416,
-  "sha256": "95c783e5018e5535e86ca3790bb471b692472d0e6ce1e21f774ad2a4357055e9",
-  "notes": "取消自动发送与自动复制；准备 PDF 附件和全文翻译指令后，由用户手动发送、复制回答。复制超过 500 字符时自动保存到对应论文并打开全屏阅读。\n\n强化逐段全文翻译提示词，覆盖公式、脚注、图表、附录和参考文献；长文输出限制时标注断点，可从网页菜单填入续译指令后手动发送。\n\n减少网页检查：附件准备完成后停止轮询，遇到网站验证或访问限制暂停，不批量操作账号。\n\n设置新增 GitHub 检查更新、下载进度、安装包完整性和签名校验、重启后恢复已下载安装包，并打开 Android 系统安装器确认更新。保留白天、夜间、跟随系统及离线阅读功能。\n\n首次正式签名发布：与旧调试版签名不同，不能直接覆盖。请先从旧版导出 PDF / Markdown，再切换正式版；卸载会删除旧版私有数据。后续正式版本可覆盖更新。\n\n提示词不能消除平台长度限制或保证翻译完整；真实 DeepSeek 登录后的附件行为仍需实际账户验收。\n\n验证：本地构建、13 项单元测试、6 项设备测试与 GitHub CI 通过；真实 Release 检查、下载、校验、重启恢复及系统安装入口已验证。Google Play 模拟器最终安装因扫描失败被系统验证拒绝，未关闭设备保护；真实设备的最终安装仍需验收。\n"
+  "versionCode": 6,
+  "versionName": "0.5.1",
+  "apkName": "arxiv-physics-v0.5.1.apk",
+  "size": 12525800,
+  "sha256": "1cbbd182ad2d0b2bcdd2422bb09946eb7dfbb86d4f6c21199def69da602ed73a",
+  "notes": "# arXiv Physics 0.5.1\n\n- \u68c0\u67e5\u66f4\u65b0\u6539\u4e3a\u5e76\u884c\u83b7\u53d6 GitHub Release \u4e0e jsDelivr CDN \u7684\u5c0f\u578b\u6e05\u5355\uff0c\u6bcf\u6761\u8bf7\u6c42\u603b\u8d85\u65f6 8 \u79d2\uff0c\u53d6\u6d88\u4f9d\u8d56 GitHub API\u3002\n- \u8bbe\u7f6e\u4e2d\u652f\u6301\u586b\u5199\u81ea\u5df1\u7684\u56fd\u5185 HTTPS \u955c\u50cf\u6e05\u5355\u5730\u5740\uff1b\u955c\u50cf\u540c\u76ee\u5f55\u653e\u7f6e\u539f\u7248 APK\uff0c\u65e0\u9700 GitHub \u767b\u5f55\u3002\n- \u4e0b\u8f7d\u4e2d\u65ad\u4fdd\u7559\u5df2\u4e0b\u8f7d\u90e8\u5206\uff0c\u91cd\u8bd5\u652f\u6301 HTTP Range \u65ad\u70b9\u7eed\u4f20\uff1b\u955c\u50cf\u4e0b\u8f7d\u5931\u8d25\u81ea\u52a8\u56de\u9000 GitHub\uff0c\u670d\u52a1\u5668\u4e0d\u652f\u6301\u7eed\u4f20\u65f6\u91cd\u65b0\u4e0b\u8f7d\u3002\n- \u6821\u9a8c\u6587\u4ef6\u5927\u5c0f\u3001SHA-256\u3001\u5305\u540d\u3001\u7248\u672c\u4ee5\u53ca\u4e0e\u5f53\u524d\u5e94\u7528\u4e00\u81f4\u7684\u7b7e\u540d\uff0c\u7ee7\u7eed\u901a\u8fc7\u7cfb\u7edf\u5b89\u88c5\u754c\u9762\u786e\u8ba4\u66f4\u65b0\u3002\n\nCDN \u5e76\u975e\u56fd\u5185\u6258\u7ba1\u4fdd\u8bc1\uff0c\u5b9e\u9645\u53ef\u8fbe\u6027\u53d6\u51b3\u4e8e\u8fd0\u8425\u5546\uff0c\u6e05\u5355\u7f13\u5b58\u53ef\u80fd\u5ef6\u8fdf\u3002\u82e5\u9700\u8981\u7a33\u5b9a\u8986\u76d6\u56fd\u5185\u7f51\u7edc\uff0c\u5e94\u5c06\u6e05\u5355\u548c APK \u540c\u6b65\u5230\u81ea\u5df1\u53ef\u63a7\u7684\u56fd\u5185\u670d\u52a1\u5668\u6216\u5bf9\u8c61\u5b58\u50a8\u3002\u672a\u914d\u7f6e\u955c\u50cf\u65f6 APK \u4ecd\u4ece GitHub Release \u4e0b\u8f7d\u3002\n"
 }
