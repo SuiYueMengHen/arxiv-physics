@@ -73,3 +73,15 @@ adb shell am instrument -w org.arxiv.physics.test/org.arxiv.physics.SmokeInstrum
 - 新增 GitHub 正式 Release 检查、流式下载、百分比进度、大小 / SHA-256 / Android 包名 / 版本 / 签名验证、进程重启恢复完整下载包、安装未知应用授权与系统确认安装。
 - 使用独立 RSA 4096 位正式密钥，正式 APK 非 debuggable；密钥与口令被 Git 忽略，不包含在公共源代码或发布资产中。首个正式签名不能覆盖旧调试签名安装，旧资料须先导出。
 - 真实 DeepSeek 登录账户未用于验收，无法保证网站行为永远兼容、模型翻译完整或账号不受限制。
+
+## 0.5.0 公开 Release 实际更新验收
+
+- 公开仓库 `SuiYueMengHen/arxiv-physics` 与 `v0.5.0` Release 已通过 gh 创建、推送并发布 APK / update.json / SHA256SUMS，GitHub 资产摘要与本地清单一致。
+- 同正式签名的较低测试版 0.4.99 / code 4，实际从应用设置识别公开 0.5.0，下载 APK，通过大小、SHA-256、包名、版本与签名校验后进入系统安装未知应用授权。
+- 取消权限后强制停止、重启应用，已下载的包恢复为可直接安装；再授权后进入系统更新确认对话框。截图 `screenshots/update-permission.png` 与 `screenshots/update-confirm.png`。
+- **Google Play Android 36 模拟器最终系统安装未通过**：Finsky APK Analysis scan failed / verification REJECT，PackageManager 返回 `INSTALL_FAILED_VERIFICATION_FAILURE`。没有关闭设备保护，没有将系统最终安装标记为通过。
+- GitHub Actions 首次因 setup-android 默认请求已移除的 tools 包失败，改为仅安装 platform-tools 后，run 37201614355 构建 / 测试 / Lint 全部通过。
+
+- 开发者 ADB 通道同签名覆盖安装 0.4.99 → 0.5.0 成功，实际 package versionCode=5 / versionName=0.5.0；原收藏论文仍在。此结果不替代上述系统安装器最终安装的失败验收。此前 PDF 下载未完成即离开详情，故未用作本次升级保留样本。
+
+- 正式 0.5.0 实际检查公开最新 Release 显示“已是最新版本 0.5.0”，截图 `screenshots/update-latest.png`。已恢复本地默认 0.5.0 构建配置；较低测试 APK 未发布。
